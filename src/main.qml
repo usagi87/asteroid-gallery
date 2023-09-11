@@ -112,7 +112,7 @@ Application {
     }
 
     Item {
-        // TODO: add to LayerStack
+         // TODO: add to LayerStack
         anchors.fill: parent
         visible: inEditMode
         	
