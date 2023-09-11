@@ -132,7 +132,7 @@ Application {
             	height: 300
             	transformOrigin: Item.TopLeft
             	fillMode: Image.Image.Stretch
-            	transform: Rotation { // This is just here as a UI demo; it won't actually edit an image.
+    			transform: Rotation { // This is just here as a UI demo; it won't actually edit an image.
                 	id: imageToEditRotation
                 	angle: 0
                 	origin.x: imageToEdit.width/2
@@ -154,7 +154,9 @@ Application {
             anchors.verticalCenter:parent.verticalCenter
             anchors.left:parent.left
             iconName: "ios-refresh-circle-outline"
-            onClicked: imageToEditRotation.angle += 90
+            onClicked:{
+            	imageToEditRotation.angle += 90
+            }
         }
 
 		IconButton {
@@ -165,6 +167,8 @@ Application {
             visible : true
             onClicked:{ 
             	imageScale()
+            	imageToEditRotation.origin.x = 300*scaleVal/2
+         		imageToEditRotation.origin.y = 300*scaleVal/2
             	imageToEdit.scale = scaleVal
             } 
         }
