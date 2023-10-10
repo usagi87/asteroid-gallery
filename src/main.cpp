@@ -14,10 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <QQmlEngine>
+#include <painter.h>
 #include <asteroidapp.h>
 
 int main(int argc, char *argv[])
 {
+	qmlRegisterType<Painter>("Painter", 1, 0, "Painter");
     return AsteroidApp::main(argc, argv);
 }

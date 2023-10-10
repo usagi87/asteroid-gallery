@@ -17,45 +17,59 @@
 import QtQuick 2.9
 import org.asteroid.controls 1.0
 import Qt.labs.folderlistmodel 2.1
-
+import QtGraphicalEffects 1.15
+import QtQuick.VirtualKeyboard 2.0
+import QtQuick.VirtualKeyboard.Settings 2.15
+import Painter 1.0
 Application {
     id: app
 
-    property var inEditMode: false
+    
 	property var scaleVal : 1.0
+	property var imageSaveName
+	property var imageToEditSource
+	property var imageFileName
 	
-    centerColor: folderModel.count > 0 ? "#31bee7" : "#31bee7"
-    outerColor:  folderModel.count > 0 ? "#052442": "#052442"
+    centerColor: "#31bee7"
+    outerColor:  "#052442"
 	
 	function imageScale(){
 		scaleVal = scaleVal + 0.5
 		if(scaleVal > 4) scaleVal = 1.0;  
 	}
-	
-    FolderListModel {
-        id: folderModel
-        folder: "file:///home/ceres/Pictures"
-        nameFilters: ["*.jpg"]
-        sortField: FolderListModel.Time
-        sortReversed: false
-        showDirs: false
-    }
 
+Painter {
+	id:painter
+}
+
+LayerStack {
+   	id: layerStack
+		firstPage: photoView
+}
+
+FolderListModel {
+	id: folderModel
+    folder: "file:///home/ceres/Pictures"
+    nameFilters: ["*.jpg"]
+    sortField: FolderListModel.Time
+    sortReversed: false
+    showDirs: false
+}
+
+
+Component{
+	id:photoView
+	Item{
+		id:rootM		
+    
     StatusPage {
         text: "No photos found"
         icon: "ios-images"
-        visible: !inEditMode && folderModel.count === 0
+        visible: folderModel.count === 0
     }
 
-    function edit(imagePath) {
-        inEditMode = true
-        imageToEdit.source = imagePath
-    }
-
-    Item {
-        anchors.fill: parent
-
-        visible: !inEditMode && folderModel.count > 0
+	Item {
+    	anchors.fill: parent
 
         Component {
             id: photoDelegate
@@ -92,9 +106,14 @@ Application {
                         bottom: parent.bottom
                         bottomMargin: parent.height * 0.05
                     }
-                    onClicked: edit(fileURL)
-                }
-            }
+                    onClicked: { 
+                    	imageToEditSource = fileURL
+                    	imageFileName = fileName
+                   		layerStack.push(imageViewer)				
+                   	}
+				}
+			}
+		}
 
         }
 
@@ -106,17 +125,17 @@ Application {
             orientation: ListView.Horizontal
             snapMode: ListView.SnapToItem
             highlightRangeMode: ListView.StrictlyEnforceRange
-            onCurrentIndexChanged: inEditMode = false
         }
 
     }
+}
 
-    Item {
-         // TODO: add to LayerStack
-        anchors.fill: parent
-        visible: inEditMode
-        	
-		Flickable {
+Component{
+	id:imageViewer
+	Item{
+		id:rootM
+     	
+     	Flickable {
 			id: flickable1
         	anchors.horizontalCenter:parent.horizontalCenter
             anchors.verticalCenter:parent.verticalCenter
@@ -127,7 +146,7 @@ Application {
         	contentHeight: 300 * scaleVal
         	Image {
             	id: imageToEdit
-            	source: "" // filled when we click the edit button
+            	source: imageToEditSource // filled when we click the edit button
             	width: 300
             	height: 300
             	transformOrigin: Item.TopLeft
@@ -138,39 +157,207 @@ Application {
                 	origin.x: imageToEdit.width/2
                 	origin.y: imageToEdit.height/2
             	}
+            	
             }
+            		 
         }
-
-        IconButton {
-            id: savebtn
-            anchors.horizontalCenter:parent.horizontalCenter
-            anchors.bottom:parent.bottom
-            iconName: "ios-checkmark-circle-outline"
-            onClicked: inEditMode = false
+        
+        Flickable {
+			id: flickable2
+        	anchors.horizontalCenter:parent.horizontalCenter
+            anchors.bottom : parent.bottom
+            anchors.bottomMargin: parent.height * 0.05
+        	flickableDirection:Flickable.HorizontalFlick
+        	boundsBehavior :Flickable.DragAndOvershootBounds
+        	clip: true
+        	height: Dims.l(20)
+        	width: 300
+        	contentWidth: 400
+        	contentHeight: Dims.l(20)
+        	
+        	Row{
+        		spacing: 5
+        		IconButton {
+        			id: savebtn
+        			width: Dims.l(18)
+        			iconName: "ios-checkmark-circle-outline"
+        			onClicked: layerStack.pop(rootM)
+        		}
+				IconButton {
+        			id: rotateleftbtn
+        			width: Dims.l(18)
+        			iconName: "ios-refresh-circle-outline"
+        			onClicked:{
+        	   			imageToEditRotation.angle += 90
+       				}
+				}	
+				IconButton {
+           			id: expandbtn
+           			width: Dims.l(18)
+           			iconName: "ios-expand"
+           			visible : true
+           			onClicked:{ 
+           				imageScale()
+           				imageToEditRotation.origin.x = 300*scaleVal/2
+        				imageToEditRotation.origin.y = 300*scaleVal/2
+           				imageToEdit.scale = scaleVal
+        			} 
+       			}		
+        		IconButton {
+           			id: mirrorbtn
+           			width: Dims.l(18)
+           			iconName: "ios-swap"
+           			visible : true
+           			onClicked:{ 
+           				layerStack.push(imageToMirrored)
+           			} 
+        		}
+        		IconButton {
+           			id: colorbtn
+           			width: Dims.l(18)
+           			iconName: "ios-swap"
+           			visible : true
+           			onClicked:{ 
+						layerStack.push(imageColorEdit)							
+           				 
+           			} 
+        		}
+        		
+        	}
         }
-
-        IconButton {
-            id: rotateleftbtn
-            anchors.verticalCenter:parent.verticalCenter
-            anchors.left:parent.left
-            iconName: "ios-refresh-circle-outline"
-            onClicked:{
-            	imageToEditRotation.angle += 90
-            }
-        }
-
-		IconButton {
-            id: expandbtn
-            anchors.verticalCenter:parent.verticalCenter
-            anchors.right:parent.right
-            iconName: "ios-expand"
-            visible : true
-            onClicked:{ 
-            	imageScale()
-            	imageToEditRotation.origin.x = 300*scaleVal/2
-         		imageToEditRotation.origin.y = 300*scaleVal/2
-            	imageToEdit.scale = scaleVal
-            } 
-        }
-    }
+	}				
 }
+
+Component{
+	id: imageColorEdit
+	Item {
+		id:rootM
+		Image {
+        	id: imageToEdit
+        	anchors.verticalCenter:parent.verticalCenter
+        	anchors.horizontalCenter:parent.horizontalCenter
+            source: imageToEditSource // filled when we click the edit button
+            width: 300
+            height: 300
+            smooth: true
+        	visible: false
+        }
+        HueSaturation {
+        	anchors.fill: imageToEdit
+        	source: imageToEdit
+        	hue: 0.0
+        	saturation: -1.0
+        	lightness: 0.0
+    	}    
+	
+	IconButton{
+			id:closebtn
+			anchors.horizontalCenter:parent.horizontalCenter
+			anchors.bottom :parent.bottom
+			anchors.bottomMargin: parent.height * 0.05
+			width: Dims.l(20)
+        	iconName: "ios-close-circle-outline"
+        	onClicked: layerStack.pop(rootM)
+		}	
+		IconButton {
+    		id: savebtn
+    		anchors.bottom:parent.bottom
+			anchors.right:closebtn.left
+			anchors.rightMargin:5
+			anchors.bottomMargin: parent.height * 0.05
+    	    width: Dims.l(20)
+    	    iconName: "ios-checkmark-circle-outline"
+    	    onClicked:{ 
+				layerStack.push(imageToSave,{"imageEdit":"grayscale"})
+				savebtn.visible=false            				 
+    	    } 
+   		}
+	}
+}
+
+Component{
+	id: imageToMirrored
+	Item {
+		id:rootM
+		Image {
+        	id: imageToEdit
+        	anchors.verticalCenter:parent.verticalCenter
+        	anchors.horizontalCenter:parent.horizontalCenter
+            source: imageToEditSource // filled when we click the edit button
+            width: 300
+            height: 300
+            smooth: true
+        	mirror:true
+        }    
+	
+		IconButton{
+			id:closebtn
+			anchors.horizontalCenter:parent.horizontalCenter
+			anchors.bottom :parent.bottom
+			anchors.bottomMargin: parent.height * 0.05
+			width: Dims.l(20)
+			iconName: "ios-close-circle-outline"
+        	onClicked: layerStack.pop(rootM)
+		}	
+		IconButton {
+    		id: savebtn
+    		anchors.bottom:parent.bottom
+			anchors.right:closebtn.left
+			anchors.rightMargin:5
+			anchors.bottomMargin: parent.height * 0.05
+    	    width: Dims.l(20)
+    	    iconName: "ios-checkmark-circle-outline"
+    	    onClicked:{ 
+				layerStack.push(imageToSave,{"imageEdit":"mirror"})
+				savebtn.visible=false 
+			} 
+   		}
+	}	
+}
+
+
+Component {
+	id:imageToSave	
+	Item {
+		id:rootM
+		property alias inputMethodHints: txtField.inputMethodHints
+		property var pop
+		property var imageEdit
+					
+		TextField {
+    		id: txtField
+    		anchors.top:parent.top
+    		anchors.topMargin :parent.height * 0.1
+    		anchors.horizontalCenter:parent.horizontalCenter
+    	    width: Dims.w(80)
+    	    previewText: qsTrId("")
+   		}	
+	
+		InputPanel {
+    		id: kbd
+    	   	anchors {
+   		    	verticalCenter: parent.verticalCenter
+   		    	horizontalCenter: parent.horizontalCenter
+   			}
+   			width:parent.width * 0.90 //Dims.w(95)
+    	   	visible: active
+   		}
+		IconButton {
+			id:txtEnter
+			anchors.bottom : parent.bottom
+ 			anchors.horizontalCenter : parent.horizontalCenter		
+ 			iconName: "ios-checkmark-circle-outline"
+ 			onClicked: {
+				painter.save(imageFileName,txtField.text,imageEdit)	
+				layerStack.pop(rootM)				
+			}
+		}
+		Component.onCompleted: {
+		VirtualKeyboardSettings.styleName = "watch"
+		
+   		}
+	}		
+}
+
+}
+

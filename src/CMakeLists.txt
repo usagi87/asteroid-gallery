@@ -1,4 +1,4 @@
-add_library(asteroid-gallery main.cpp resources.qrc)
+add_library(asteroid-gallery main.cpp painter.h painter.cpp resources.qrc)
 
 target_link_libraries(asteroid-gallery PUBLIC
 	AsteroidApp)
